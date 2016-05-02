@@ -10,15 +10,17 @@ import ec.util.Parameter;
  * @author Alex
  */
 public class GraphStatistics extends SimpleShortStatistics {
-    @Override
+	private static final long serialVersionUID = 1L;
+
+	@Override
     public void postEvaluationStatistics(EvolutionState state){
         boolean output = (state.generation % modulus == 0);
 
         // gather timings
         if (output && doTime)
             {
-            Runtime r = Runtime.getRuntime();
-            long curU =  r.totalMemory() - r.freeMemory();
+            //Runtime r = Runtime.getRuntime();
+            //long curU =  r.totalMemory() - r.freeMemory();
             state.output.print("" + (System.currentTimeMillis()-lastTime) + " ",  statisticslog);
             }
 
@@ -141,6 +143,26 @@ public class GraphStatistics extends SimpleShortStatistics {
             state.output.print("" + (popBestOfGeneration.fitness.fitness()) + " " , statisticslog);                 // best fitness of pop this gen
             state.output.print("" + (popBestSoFar.fitness.fitness()) + " " , statisticslog);                // best fitness of pop so far
 
+            if (GraphInitializer.dynamicNormalisation) {
+	            GraphInitializer.availIdx = 0;
+	            GraphInitializer.reliaIdx = 0;
+	            GraphInitializer.timeIdx = 0;
+	            GraphInitializer.costIdx = 0;
+	            state.output.print(GraphInitializer.meanAvailPerGen[GraphInitializer.availIdx++] + " ", statisticslog);
+	            state.output.print(GraphInitializer.meanReliaPerGen[GraphInitializer.reliaIdx++] + " ", statisticslog);
+	            state.output.print(GraphInitializer.meanTimePerGen[GraphInitializer.timeIdx++] + " ", statisticslog);
+	            state.output.print(GraphInitializer.meanCostPerGen[GraphInitializer.costIdx++] + " ", statisticslog);
+
+	            state.output.print("" + ((GraphParticle)popBestOfGeneration).getAvailability() + " ", statisticslog);
+	            state.output.print("" + ((GraphParticle)popBestOfGeneration).getReliability() + " ", statisticslog);
+	            state.output.print("" + ((GraphParticle)popBestOfGeneration).getTime() + " ", statisticslog);
+	            state.output.print("" + ((GraphParticle)popBestOfGeneration).getCost() + " ", statisticslog);
+
+	            state.output.print("" + ((GraphParticle)popBestSoFar).getAvailability() + " ", statisticslog);
+	            state.output.print("" + ((GraphParticle)popBestSoFar).getReliability() + " ", statisticslog);
+	            state.output.print("" + ((GraphParticle)popBestSoFar).getTime() + " ", statisticslog);
+	            state.output.print("" + ((GraphParticle)popBestSoFar).getCost() + " ", statisticslog);
+            }
             }
 
         // hook for KozaShortStatistics etc.

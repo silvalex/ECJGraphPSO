@@ -11,10 +11,13 @@ import java.util.Set;
 import ec.EvolutionState;
 import ec.Individual;
 import ec.Problem;
+import ec.Subpopulation;
 import ec.simple.SimpleFitness;
 import ec.simple.SimpleProblemForm;
 
 public class ECJGraphPSO extends Problem implements SimpleProblemForm{
+
+	private static final long serialVersionUID = 1L;
 
 	@Override
 	public void evaluate(final EvolutionState state, final Individual ind, final int subpopulation, final int threadnum) {
@@ -43,21 +46,118 @@ public class ECJGraphPSO extends Problem implements SimpleProblemForm{
         // Calculate longest time
         t = findLongestPath(graph);
 
-        a = normaliseAvailability(a, init);
-        r = normaliseReliability(r, init);
-        t = normaliseTime(t, init);
-        c = normaliseCost(c, init);
+        ind2.setAvailability(a);
+        ind2.setReliability(r);
+        ind2.setTime(t);
+        ind2.setCost(c);
 
-        double fitness = init.w1 * a + init.w2 * r + init.w3 * t + init.w4 * c;
+        if (!GraphInitializer.dynamicNormalisation) {
+        	double fitness = calculateFitness(a, r, t, c, init);
 
-        ((SimpleFitness)ind2.fitness).setFitness(state,
-                // ...the fitness...
-                fitness,
-                ///... is the individual ideal?  Indicate here...
-                false);
+	        ((SimpleFitness)ind2.fitness).setFitness(state,
+	                // ...the fitness...
+	                fitness,
+	                ///... is the individual ideal?  Indicate here...
+	                false);
+	        ind2.evaluated = true;
+        }
 
         ind2.setStringRepresentation(graph.toString());
-        ind2.evaluated = true;
+	}
+
+	@Override
+	public void finishEvaluating(EvolutionState state, int threadnum) {
+		GraphInitializer init = (GraphInitializer) state.initializer;
+
+		if (GraphInitializer.dynamicNormalisation) {
+			// Get population
+			Subpopulation pop = state.population.subpops[0];
+
+			double minAvailability = 2.0;
+			double maxAvailability = -1.0;
+			double minReliability = 2.0;
+			double maxReliability = -1.0;
+			double minTime = Double.MAX_VALUE;
+			double maxTime = -1.0;
+			double minCost = Double.MAX_VALUE;
+			double maxCost = -1.0;
+
+			// Keep track of means
+			double meanAvailability = 0.0;
+			double meanReliability = 0.0;
+			double meanTime = 0.0;
+			double meanCost = 0.0;
+
+			// Find the normalisation bounds
+			for (Individual ind : pop.individuals) {
+				GraphParticle wscInd = (GraphParticle) ind;
+				double a = wscInd.getAvailability();
+				double r = wscInd.getReliability();
+				double t = wscInd.getTime();
+				double c = wscInd.getCost();
+
+				meanAvailability += a;
+				meanReliability += r;
+				meanTime += t;
+				meanCost += c;
+
+				if (a < minAvailability)
+					minAvailability = a;
+				if (a > maxAvailability)
+					maxAvailability = a;
+				if (r < minReliability)
+					minReliability = r;
+				if (r > maxReliability)
+					maxReliability = r;
+				if (t < minTime)
+					minTime = t;
+				if (t > maxTime)
+					maxTime = t;
+				if (c < minCost)
+					minCost = c;
+				if (c > maxCost)
+					maxCost = c;
+			}
+
+			GraphInitializer.meanAvailPerGen[GraphInitializer.availIdx++] = meanAvailability / pop.individuals.length;
+			GraphInitializer.meanReliaPerGen[GraphInitializer.reliaIdx++] = meanReliability / pop.individuals.length;
+			GraphInitializer.meanTimePerGen[GraphInitializer.timeIdx++] = meanTime / pop.individuals.length;
+			GraphInitializer.meanCostPerGen[GraphInitializer.costIdx++] = meanCost / pop.individuals.length;
+
+			// Update the normalisation bounds with the newly found values
+			init.minAvailability = minAvailability;
+			init.maxAvailability = maxAvailability;
+			init.minReliability = minReliability;
+			init.maxReliability = maxReliability;
+			init.minCost = minCost;
+			init.maxCost = maxCost;
+			init.minTime = minTime;
+			init.maxTime = maxTime;
+
+			// Finish calculating the fitness of each candidate
+			for (Individual ind : pop.individuals) {
+				calculateFitness((GraphParticle)ind, state);
+			}
+		}
+	}
+
+	private void calculateFitness(GraphParticle ind, EvolutionState state) {
+		double fitness = calculateFitness(ind.getAvailability(), ind.getReliability(), ind.getTime(), ind.getCost(), (GraphInitializer)state.initializer);
+
+		// the fitness better be SimpleFitness!
+		SimpleFitness f = ((SimpleFitness) ind.fitness);
+		f.setFitness(state, fitness, false);
+		ind.evaluated = true;
+	}
+
+	private double calculateFitness(double a, double r, double t, double c, GraphInitializer init) {
+		a = normaliseAvailability(a, init);
+		r = normaliseReliability(r, init);
+		t = normaliseTime(t, init);
+		c = normaliseCost(c, init);
+
+		double fitness = ((init.w1 * a) + (init.w2 * r) + (init.w3 * t) + (init.w4 * c));
+		return fitness;
 	}
 
 	private double normaliseAvailability(double availability, GraphInitializer init) {

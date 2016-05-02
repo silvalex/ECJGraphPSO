@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -27,6 +26,7 @@ import ec.simple.SimpleInitializer;
 import ec.util.Parameter;
 
 public class GraphInitializer extends SimpleInitializer {
+	private static final long serialVersionUID = 1L;
 	// Constants with of order of QoS attributes
 	public static final int TIME = 0;
 	public static final int COST = 1;
@@ -43,9 +43,9 @@ public class GraphInitializer extends SimpleInitializer {
 	public Node endNode;
 	public GraphRandom random;
 
-	public final double minAvailability = 0.0;
+	public double minAvailability = 0.0;
 	public double maxAvailability = -1.0;
-	public final double minReliability = 0.0;
+	public double minReliability = 0.0;
 	public double maxReliability = -1.0;
 	public double minTime = Double.MAX_VALUE;
 	public double maxTime = -1.0;
@@ -55,6 +55,16 @@ public class GraphInitializer extends SimpleInitializer {
 	public double w2;
 	public double w3;
 	public double w4;
+	public static boolean dynamicNormalisation;
+
+	public static double[] meanAvailPerGen;
+	public static double[] meanReliaPerGen;
+	public static double[] meanTimePerGen;
+	public static double[] meanCostPerGen;
+	public static int availIdx = 0;
+	public static int reliaIdx = 0;
+	public static int timeIdx = 0;
+	public static int costIdx = 0;
 
 	@Override
 	public void setup(EvolutionState state, Parameter base) {
@@ -66,11 +76,21 @@ public class GraphInitializer extends SimpleInitializer {
 		Parameter weight2Param = new Parameter("fitness-weight2");
 		Parameter weight3Param = new Parameter("fitness-weight3");
 		Parameter weight4Param = new Parameter("fitness-weight4");
+		Parameter dynamicNormalisationParam = new Parameter("dynamic-normalisation");
 
 		w1 = state.parameters.getDouble(weight1Param, null);
 		w2 = state.parameters.getDouble(weight2Param, null);
 		w3 = state.parameters.getDouble(weight3Param, null);
 		w4 = state.parameters.getDouble(weight4Param, null);
+		dynamicNormalisation = state.parameters.getBoolean(dynamicNormalisationParam, null, false);
+
+		if (dynamicNormalisation) {
+			int numGens = state.parameters.getInt(new Parameter("generations"), null);
+			meanAvailPerGen = new double[numGens];
+			meanReliaPerGen = new double[numGens];
+			meanTimePerGen = new double[numGens];
+			meanCostPerGen = new double[numGens];
+		}
 
 		parseWSCServiceFile(state.parameters.getString(servicesParam, null));
 		parseWSCTaskFile(state.parameters.getString(taskParam, null));
@@ -92,7 +112,8 @@ public class GraphInitializer extends SimpleInitializer {
 		populateTaxonomyTree();
 		relevant = getRelevantServices(serviceMap, taskInput, taskOutput);
 		mapServicesToIndices(relevant,serviceToIndexMap);
-		calculateNormalisationBounds(relevant);
+		if (!dynamicNormalisation)
+			calculateNormalisationBounds(relevant);
 
 		// Set size of particles
 		Parameter genomeSizeParam = new Parameter("pop.subpop.0.species.genome-size");

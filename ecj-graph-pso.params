@@ -1,11 +1,12 @@
 seed.0 = 10
-composition-task     = problem.xml
-composition-taxonomy = taxonomy.xml
-composition-services = services-output.xml
-fitness-weight1      = 0.25
-fitness-weight2      = 0.25
-fitness-weight3      = 0.25
-fitness-weight4      = 0.25
+composition-task      = problem.xml
+composition-taxonomy  = taxonomy.xml
+composition-services  = services-output.xml
+fitness-weight1       = 0.25
+fitness-weight2       = 0.25
+fitness-weight3       = 0.25
+fitness-weight4       = 0.25
+dynamic-normalisation = true
 
 state = ec.simple.SimpleEvolutionState
 init = ec.pso.GraphInitializer
